@@ -4,8 +4,9 @@ const BigNumber = require('bignumber.js');
 const FlexContract = require('flex-contract');
 const FlexEther = require('flex-ether');
 const ethjs = require('ethereumjs-util');
+const process = require('process');
 
-const SENDER_KEY = ethjs.keccak256(Buffer.from('notmykeys'));
+const SENDER_KEY = ethjs.keccak256(Buffer.from(process.env.SEED));
 const SENDER_ADDRESS = ethjs.toChecksumAddress(
     ethjs.bufferToHex(ethjs.privateToAddress(SENDER_KEY)),
 );
@@ -90,7 +91,13 @@ const WEENUS = new FlexContract(
         poolInfo, ARGV.amount,
         ARGV.tickDelta,
     );
-})();
+})().then(() => {
+    console.info(`Done!`);
+    process.exit();
+}).catch(err => {
+    console.error(err);
+    process.exit(-1);
+});
 
 function getTokens(pair) {
     return pair.split('/')
@@ -119,8 +126,9 @@ async function createPool(pair, fee) {
     }
     const pool = POOL.clone({ address: poolAddress });
     if (!(await pool.slot0().call()).unlocked) {
-        const price = await getDefaultPriceForPair(pair);
-        console.info(`Initializing pool with 1:1 price (${price.yellow})...`);
+        const tickSpacing = parseInt(await pool.tickSpacing().call());
+        const price = await getDefaultPriceForPair(pair, tickSpacing);
+        console.info(`Initializing pool with 1:1 price (${price.toString().yellow})...`);
         await pool.initialize(toSqrtPriceX96(price)).send({ key: SENDER_KEY });
         console.info(`Pool initialized!`);
     } else {
@@ -159,10 +167,23 @@ function tickToPrice(tick) {
     return 1.0001 ** tick;
 }
 
+function alignTick(tick, tickSpacing) {
+    const d = tick % tickSpacing;
+    if (d < 0) {
+        return tick - (tickSpacing + d);
+    }
+    return tick - d;
+}
+
 // Create a price for token1(1) / token0(1)
-async function getDefaultPriceForPair(pair) {
+async function getDefaultPriceForPair(pair, tickSpacing) {
     const [decimals0, decimals1] = await Promise.all(pair.map(async t => t.decimals().call()));
-    return new BigNumber(`1e${decimals1}`).div(`1e${decimals0}`).toString(10);
+    return tickToPrice(
+        alignTick(
+            priceToTick(new BigNumber(`1e${decimals1}`).div(`1e${decimals0}`)),
+            tickSpacing,
+        ),
+    );
 }
 
 async function getPoolInfo(pool) {
@@ -190,13 +211,6 @@ async function getPoolInfo(pool) {
     };
 }
 
-function alignTick(tick, tickSpacing) {
-    const d = tick % tickSpacing;
-    if (d < 0) {
-        return tick - (tickSpacing + d);
-    }
-    return tick - d;
-}
 
 async function addLiquidity(poolInfo, amount, tickDelta) {
     const priceTick = alignTick(poolInfo.tick, poolInfo.tickSpacing);
