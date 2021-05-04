@@ -58,7 +58,7 @@ const ARGV = require('yargs')
 const ETH = new FlexEther({ providerURI: process.env.NODE_RPC });
 const FACTORY = new FlexContract(
     require('../build/IUniswapV3Factory.output.json').abi,
-    '0xb31b9A7b331eA8993bdfC67c650eDbfc9256eC62',
+    '0x273Edaa13C845F605b5886Dd66C89AB497A6B17b',
     { eth: ETH },
 );
 const POOL = new FlexContract(
@@ -68,7 +68,7 @@ const POOL = new FlexContract(
 );
 const POSITION_MANAGER = new FlexContract(
     require('../build/IUniswapV3PositionManager.output.json').abi,
-    '0x29e4bF3bFD649b807B4C752c01023E535094F6Bc',
+    '0x74e838ECf981Aaef2523aa5B666175DA319D8D31',
     { eth: ETH },
 );
 const WETH = new FlexContract(

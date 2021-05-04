@@ -94,3 +94,31 @@ interface IUniswapV3PositionManager {
             uint256 amount1
         );
 }
+
+interface IUniswapV3Quoter {
+    function factory()
+        external
+        view
+        returns (IUniswapV3Factory factory_);
+    function quoteExactInput(bytes memory path, uint256 amountIn)
+        external
+        returns (uint256 amountOut);
+    function quoteExactOutput(bytes memory path, uint256 amountOut)
+        external
+        returns (uint256 amountIn);
+}
+
+interface IUniswapV3Router {
+    struct ExactInputParams {
+        bytes path;
+        address recipient;
+        uint256 deadline;
+        uint256 amountIn;
+        uint256 amountOutMinimum;
+    }
+
+    function exactInput(ExactInputParams memory params)
+        external
+        payable
+        returns (uint256 amountOut);
+}
